@@ -1,4 +1,4 @@
-package com.asm.wenhejiankang.bluetooth;
+package com.asm.wenhejiankang.jkbluetooth;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothClass;
@@ -15,11 +16,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import com.xl.game.tool.Log;
 
 public class JKBluetoothManager {
 	public static final String MUUID = "00001101-0000-1000-8000-00805F9B34FB";
-		public static final String TAG = "JKBluetoothManager";
+
 	/*蓝牙状态值
 	 * STATE_CLOSED 关闭的
 	 * STATE_OPENFAIL 打开失败，临时状态
@@ -43,29 +43,23 @@ public class JKBluetoothManager {
 	public static final int STATE_CONNECTEDFAIL = 8;
 	public static final int STATE_DISCONNECTED=9;
 
-	//设备列表
 	private List<BluetoothDevice> devices = null;
 	private JKBluetoothManager manager = null;
 	private BluetoothAdapter adapter = null;
 	private BroadcastReceiver mReceiver = null;
 	private Context mContext = null;
 	private OnStateChangedListener stateChangedListener = null;
-	//血氧仪监听
 	private OnBloudOxygenDataChangedListener bloudOxygenDataChangedListener = null;
-	//血糖
 	private OnGlycemicIndexDataChangedListener glycemicIndexDataChangedListener = null;
-	//血压
 	private OnBloudPressureDataChangedListener bloudPressureDataChangedListener = null;
-	//温度
 	private OnAnimalHeatDataChangedListener animalHeatDataChangedListener = null;
-	//数据传输线程
 	private DataCommunicationThread mDataCommunicationThread = null;
 
-	int state = 0;
-	BufferedInputStream bis = null;
-	BufferedOutputStream bos = null;
-	BluetoothSocket socket = null;
-	BluetoothDevice currentDevice = null;
+	private int state = 0;
+	private BufferedInputStream bis = null;
+	private BufferedOutputStream bos = null;
+	private BluetoothSocket socket = null;
+	private BluetoothDevice currentDevice = null;
 
 	private JKBluetoothManager() {
 		state = STATE_CLOSED;
@@ -76,68 +70,12 @@ public class JKBluetoothManager {
 		setState(STATE_OPENED);
 		devices = new ArrayList<BluetoothDevice>();
 		mReceiver = new BlueToothReceiver();
-		
-		//stateChangedListener = new OnStateChangedListener();
-		bloudOxygenDataChangedListener = new onBindOxygen();
-		glycemicIndexDataChangedListener = new onGlycem();
-		bloudPressureDataChangedListener = new onBlound();
-		//animalHeatDataChangedListener = new OnAnimalHeatDataChangedListener();
+		stateChangedListener = new OnStateChangedListener();
+		bloudOxygenDataChangedListener = new OnBloudOxygenDataChangedListener();
+		glycemicIndexDataChangedListener = new OnGlycemicIndexDataChangedListener();
+		bloudPressureDataChangedListener = new OnBloudPressureDataChangedListener();
+		animalHeatDataChangedListener = new OnAnimalHeatDataChangedListener();
 	}
-	
-		public JKBluetoothManager(OnStateChangedListener listener)
-		{
-			state = STATE_CLOSED;
-			setOnStateChangedListener(listener);
-			
-			adapter = BluetoothAdapter.getDefaultAdapter();
-			if (!adapter.isEnabled())
-				if (!adapter.enable())
-					notifyState(STATE_OPENFAIL);
-			setState(STATE_OPENED);
-			devices = new ArrayList<BluetoothDevice>();
-			mReceiver = new BlueToothReceiver();
-			//stateChangedListener = new OnStateChangedListener();
-			bloudOxygenDataChangedListener = new onBindOxygen();
-			glycemicIndexDataChangedListener = new onGlycem();
-			bloudPressureDataChangedListener = new onBlound();
-			//animalHeatDataChangedListener = new OnAnimalHeatDataChangedListener();
-			
-			
-			
-		}
-	
-		/*
-		 * 设置蓝牙状态监听器
-		 */
-		public void setOnStateChangedListener(OnStateChangedListener sc) {
-				stateChangedListener = sc;
-			}
-			
-			//设置温度计监听
-		public void setOnAnimalHeatDataChangedListener(OnAnimalHeatDataChangedListener lis)
-		{
-			this.animalHeatDataChangedListener=lis;
-		}
-			
-		/*
-		 * 设置血氧仪监听器
-		 */
-		public void setOnBloudOxygenDataChangedListener(OnBloudOxygenDataChangedListener l) {
-				bloudOxygenDataChangedListener = l;
-			}
-		/*
-		 * 设置血糖仪监听器
-		 */
-		public void setOnGlycemicIndexDataChangedListener(OnGlycemicIndexDataChangedListener l) {
-				glycemicIndexDataChangedListener = l;
-			}
-		/*
-		 * 设置血压仪监听器
-		 */
-		public void setOnBloudPressureDataChangedListener(OnBloudPressureDataChangedListener l) {
-				bloudPressureDataChangedListener = l;
-			}
-		
 
 	/*
 	 * 得到一个实例
@@ -154,6 +92,30 @@ public class JKBluetoothManager {
 		return getInstance();
 	}
 
+	/*
+	 * 设置蓝牙状态监听器
+	 */
+	public void setOnStateChangedListener(OnStateChangedListener sc) {
+		stateChangedListener = sc;
+	}
+	/*
+	 * 设置血氧仪监听器
+	 */
+	public void setOnBloudOxygenDataChangedListener(OnBloudOxygenDataChangedListener l) {
+		bloudOxygenDataChangedListener = l;
+	}
+	/*
+	 * 设置血糖仪监听器
+	 */
+	public void setOnGlycemicIndexDataChangedListener(OnGlycemicIndexDataChangedListener l) {
+		glycemicIndexDataChangedListener = l;
+	}
+	/*
+	 * 设置血压仪监听器
+	 */
+	public void setOnBloudPressureDataChangedListener(OnBloudPressureDataChangedListener l) {
+		bloudPressureDataChangedListener = l;
+	}
 
 	/*
 	 * 查找设备，可以在蓝牙状态监听器里监听
@@ -234,49 +196,6 @@ public class JKBluetoothManager {
 	}
 
 	/*
-	 * 获得设备主要类别
-	 * 包括  
-            public static final int MISC              = 0x0000;
-            public static final int COMPUTER          = 0x0100;
-            public static final int PHONE             = 0x0200;
-            public static final int NETWORKING        = 0x0300;
-            public static final int AUDIO_VIDEO       = 0x0400;
-            public static final int PERIPHERAL        = 0x0500;
-            public static final int IMAGING           = 0x0600;
-            public static final int WEARABLE          = 0x0700;
-            public static final int TOY               = 0x0800;
-            public static final int HEALTH            = 0x0900;
-            public static final int UNCATEGORIZED     = 0x1F00;
-       	该app用到的是HEALTH
-	 */
-	public int getDeviceMainType(BluetoothDevice de) throws JKBlutToothException {
-		if (de == null)
-			throw new JKBlutToothException("BluetoothDevice is null");
-		BluetoothClass cs = de.getBluetoothClass();
-		return cs.getMajorDeviceClass();
-	}
-
-	/*
-	 * 获得设备具体类别
-	 * 包括     
-	 *  public static final int HEALTH_UNCATEGORIZED                = 0x0900;
-        public static final int HEALTH_BLOOD_PRESSURE               = 0x0904;
-        public static final int HEALTH_THERMOMETER                  = 0x0908;
-        public static final int HEALTH_WEIGHING                     = 0x090C;
-        public static final int HEALTH_GLUCOSE                      = 0x0910;
-        public static final int HEALTH_PULSE_OXIMETER               = 0x0914;
-        public static final int HEALTH_PULSE_RATE                   = 0x0918;
-        public static final int HEALTH_DATA_DISPLAY                 = 0x091C;
-        该app用到的是HEALTH_BLOOD_PRESSURE,HEALTH_THERMOMETER,HEALTH_PULSE_OXIMETER,HEALTH_GLUCOSE
-	 */
-	public int getDeviceSpecificType(BluetoothDevice de) throws JKBlutToothException {
-		if (de == null)
-			throw new JKBlutToothException("BluetoothDevice is null");
-		BluetoothClass cs = de.getBluetoothClass();
-		return cs.getDeviceClass();
-	}
-
-	/*
 	 * 应用退出应调用此方法释放资源
 	 */
 	public void destory() throws IOException{
@@ -292,7 +211,7 @@ public class JKBluetoothManager {
 	}
 
 	private void notifyState(int i) {
-		stateChangedListener.onStateChanged(devices, state);
+		stateChangedListener.onStateChanged(state);
 	}
 
 	private boolean registerDevicesFoundBroadCast() {
@@ -315,67 +234,83 @@ public class JKBluetoothManager {
 
 	class BlueToothReceiver extends BroadcastReceiver {
 		@Override
-		public void onReceive(Context context, Intent intent) 
-		{
+		public void onReceive(Context context, Intent intent) {
 			String action = intent.getAction();
-			//开始查找设备
-			if (BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(action))
-			{
+			if (BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(action)) {
 				setState(STATE_DISCOVERYING);
-			}
-			//搜索到一个设备
-			else if (BluetoothDevice.ACTION_FOUND.equals(action))
-			{
+			} else if (BluetoothDevice.ACTION_FOUND.equals(action)) {
 				BluetoothDevice d = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 				devices.add(d);
 				notifyState(STATE_FOUND);
-			}
-			//搜索完成
-			else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action))
-			{
+			} else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
 				setState(STATE_DISCOVERIED);
 				unRegisterDevicesFoundBroadCast();
 			}
 		}
 	}
 
-
-		class onBindOxygen implements OnBloudOxygenDataChangedListener
-			{
-
-				@Override
-				public void onDataChanged(byte[] ls, float saturability, int rate, float vqi)
-					{
-						// TODO: Implement this method
-					}
-				
-			
-		}
-
-		class onGlycem implements OnGlycemicIndexDataChangedListener
-			{
-
-				@Override
-				public void onDataChanged(float gi)
-					{
-						// TODO: Implement this method
-					}
-				
-			
-		}
-
-	class onBlound implements	OnBloudPressureDataChangedListener
-			{
-
-				@Override
-				public void onDataChanged(int highest, int lowest, int rate)
-					{
-						// TODO: Implement this method
-					}
-				
-		
+	public class OnStateChangedListener {
+		public void onStateChanged(int s) {
+		};
 	}
 
+	/*--------------------------------以下各监听类值若为-1或null，则说明此帧不含该数据，应该无视------------------------------*/
+	/*
+	 * highest 高压
+	 * lowest 低压
+	 * rate 心律
+	 */
+	public class OnBloudPressureDataChangedListener {
+		public void onDataChanged(int highest, int lowest, int rate) {
+
+		}
+	}
+
+	/*
+	 * gi
+	 * 血糖指数
+	 */
+	public class OnGlycemicIndexDataChangedListener {
+		public void onDataChanged(float gi) {
+
+		}
+	}
+
+	/*
+	 * ls 血氧体积描记图数据 ,10个字节
+	 * saturability 血氧饱和度
+	 * rate 脉率
+	 * vqi 灌注指数
+	 */
+	public class OnBloudOxygenDataChangedListener {
+		public void onDataChanged(int[] ls, float saturability, int rate, float vqi) {
+
+		}
+	}
+
+	/*
+	 * tp 温度
+	 * temMetric 温度度量
+	 * 		0 摄氏度 
+	 * 		1华氏度
+	 * temType 温度类型
+	 * 		0人体温度
+	 * 		1物体温度
+	 * 		2环境温度
+	 * state 状态
+	 * 		0正常
+	 * 		1测量温度过低
+	 * 		2测量温度过高
+	 * 		3环境温度过低
+	 * 		4环境温度过高
+	 * 		5EEPROM出错
+	 * 		6传感器出错
+	 */
+	public class OnAnimalHeatDataChangedListener {
+		public void onDataChanged(float tp, int temMetric,int temType,int state) {
+			
+		}
+	}
 
 	class ConnectThread extends Thread {
 		BluetoothDevice de = null;
@@ -397,7 +332,7 @@ public class JKBluetoothManager {
 				bos = new BufferedOutputStream(socket.getOutputStream());
 				currentDevice = de;
 				setState(STATE_CONNECTED);
-				mDataCommunicationThread = new DataCommunicationThread(bis, bos, getDeviceSpecificType(currentDevice));
+				mDataCommunicationThread = new DataCommunicationThread(bis, bos);
 				mDataCommunicationThread.start();
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -415,16 +350,13 @@ public class JKBluetoothManager {
 	class DataCommunicationThread extends Thread {
 		BufferedInputStream in = null;
 		BufferedOutputStream out = null;
-		int type = 0;
-		boolean isOn=false;
-		
+		boolean isOn = false;
 
-		public DataCommunicationThread(BufferedInputStream in, BufferedOutputStream out, int type) {
+		public DataCommunicationThread(BufferedInputStream in, BufferedOutputStream out) {
 			// TODO 自动生成的构造函数存根
 			this.in = in;
 			this.out = out;
-			this.type = type;
-			isOn=true;
+			isOn = true;
 		}
 
 		@Override
@@ -432,30 +364,30 @@ public class JKBluetoothManager {
 			// TODO 自动生成的方法存根
 			try {
 				super.run();
-				int count=0;
-				byte[] data = new byte[20];
-				while (isOn) 
-				{
-					while(count==0)
-					{
-						count=in.available();
+				int[] data = new int[20];
+				boolean isFirst=true;
+				while (isOn) {
+					int i, j;
+					if(!isFirst)
+					in.reset();
+					isFirst=false;
+					for (i = 0; i < 20; i++) {
+						in.mark(20);
+						if ((j = in.read()) == 0xFE && i != 0)
+							break;
+						data[i] = j;
 					}
-					Log.e(TAG,"开始获取输入信息");
-					in.read(data);
+
 					if (data[0] != 0xFE)
 						throw new JKBlutToothException("data head error");
 					if (data[1] != 0x6A)
 						throw new JKBlutToothException("is not buletooth");
-					switch (type) {
+					switch (data[2]) {
 					// 血氧仪
-					case BluetoothClass.Device.HEALTH_PULSE_OXIMETER:
-						if (data[2] != 0x76)
-							throw new JKBlutToothException("is not pulse oximeter");
-						if (true) {
+					case 0x76:
 							if (data[3] == 0x51) {
 								// 体积描记图
-								byte[] ls = subByte(data, 5, 11);
-								bloudOxygenDataChangedListener.onDataChanged(ls, -1, -1, -1);
+								bloudOxygenDataChangedListener.onDataChanged(subInts(data, 5, 10), -1, -1, -1);
 							} else if (data[3] == 0x52) {
 								// 血氧饱和度和脉率数据
 								bloudOxygenDataChangedListener.onDataChanged(null, data[7], data[6], data[8]);
@@ -463,87 +395,107 @@ public class JKBluetoothManager {
 								// 血氧饱和度和脉率报警限
 								bloudOxygenDataChangedListener.onDataChanged(null, data[7], data[6], data[8]);
 							}
-						}
 						break;
 					// 血压仪
-					case BluetoothClass.Device.HEALTH_BLOOD_PRESSURE:
-						if (data[2] != 0x73)
-							throw new JKBlutToothException("is not bloud pressure");
-						if (true) {
+					case 0x73:
 							if (data[3] == 0x5A) {
 								bloudPressureDataChangedListener.onDataChanged(data[4], data[5], data[6]);
 							}
-						}
 						break;
 					// 耳温仪
-					case BluetoothClass.Device.HEALTH_THERMOMETER:
-						if (data[2] != 0x72)
-							throw new JKBlutToothException("is not animal heat");
-						if (true) {
+					case 0x72:
 							if (data[3] == 0x5A) {
-								char b = byteToChar(new byte[] { data[4], data[5] });
-								StringBuilder sb = new StringBuilder(String.valueOf(b));
-								sb.insert(sb.length() - 2, ".");
-								float f = Float.valueOf(sb.toString());
-								byte ss=data[6];
-								if(animalHeatDataChangedListener!=null)
-								animalHeatDataChangedListener.onDataChanged(f,(int)data[7],binToDecimal(data[6]+""+data[5]),binToDecimal(data[4]+""+data[3]+""+data[2]));
+								if(data[4]==0x55)
+									break;
+								//StringBuilder sb=new StringBuilder(Integer.parseInt(Integer.toHexString(data[4]) + Integer.toHexString(data[5]),16));
+								String s1=Integer.toHexString(data[4]);
+								String s2=Integer.toHexString(data[5]);
+								i=Integer.parseInt(s1+s2,16);
+								StringBuffer sb=new StringBuffer();
+								sb.append(i);
+								float f = Float.valueOf(sb.insert(sb.length()-2, ".").toString());
+								byte ss = (byte) data[6];
+								int metric, ty, st;
+								ty = st = 0;
+								metric = getBit(ss, 7);
+								int b6 = getBit(ss, 6);
+								int b5 = getBit(ss, 5);
+								if (b6 == 0 && b5 == 0)
+									ty = 0;
+								else if (b6 == 0 && b5 == 1)
+									ty = 1;
+								else if (b6 == 1 && b5 == 0)
+									ty = 2;
+								int b4 = getBit(ss, 4);
+								int b3 = getBit(ss, 3);
+								int b2 = getBit(ss, 2);
+								if (b4 == 0 && b3 == 0 && b2 == 0)
+									st = 0;
+								else if (b4 == 0 && b3 == 0 && b2 == 1)
+									st = 1;
+								else if (b4 == 0 && b3 == 1 && b2 == 0)
+									st = 2;
+								else if (b4 == 0 && b3 == 1 && b2 == 1)
+									st = 3;
+								else if (b4 == 1 && b3 == 0 && b2 == 0)
+									st = 4;
+								else if (b4 == 1 && b3 == 0 && b2 == 1)
+									st = 5;
+								else if (b4 == 1 && b3 == 1 && b2 == 0)
+									st = 6;
+								else if (b4 == 1 && b3 == 1 && b2 == 1)
+									st = 7;
+								animalHeatDataChangedListener.onDataChanged(f, metric, ty, st);
 							}
-						}
 						break;
 					// 血糖仪
-					case BluetoothClass.Device.HEALTH_GLUCOSE:
-						if (data[2] != 0x75)
-							throw new JKBlutToothException("is not glycemic index");
-						if (true) {
+					case 0x75:
 							if (data[3] == 0x5A) {
-								glycemicIndexDataChangedListener
-										.onDataChanged(((float) byteToChar(new byte[] { data[4], data[5] })) / 18);
+								if(data[6]!=0x88)
+									break;
+								glycemicIndexDataChangedListener.onDataChanged(Float.valueOf(Integer.parseInt(Integer.toHexString(data[4]) + Integer.toHexString(data[5]),16) / 18));
 							}
-						}
 					default:
-						break;
+						throw new JKBlutToothException("not a valid device");
 					}
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
-
 		public void close() {
-			isOn=false;
+			isOn = false;
 		}
 
 		public void writeData(byte[] b) {
-			
+
 		}
 	}
-
-	public static byte[] subByte(byte[] b, int bpos, int length) {
-		byte[] da = new byte[length];
+	
+	public static int[] subInts(int[] b, int bpos, int length) {
+		int[] da = new int[length];
 		for (int i = 0; i < length; i++)
 			da[i] = b[bpos + i];
 		return da;
 	}
 
-	public static int bytesToInt(byte[] byteNum) {
-		int num = 0;
-		for (int ix = 0; ix < 4; ++ix) {
-			num <<= 8;
-			num |= (byteNum[ix] & 0xff);
-		}
-		return num;
+	public static int[] bytesToInts(byte[] b) {
+		int[] i = new int[b.length];
+		for (int j = 0; j < b.length; j++)
+			i[j] = (int) b[j];
+		return i;
 	}
 
-	public static char byteToChar(byte[] b) {
-		char c = (char) (((b[0] & 0xFF) << 8) | (b[1] & 0xFF));
-		return c;
+	public static byte[] intsToBytes(int[] i) {
+		byte[] b = new byte[i.length];
+		for (int j = 0; j < i.length; j++)
+			b[j] = (byte) i[j];
+		return b;
 	}
+
+	public static int getBit(byte b, int i) {
+		return (b << i) >> 7;
+	}
+
 	
-	public static int binToDecimal(String s){
-		int x = 0;
-        for(char c: s.toCharArray())
-             x = x * 2 + (c == '1' ? 1 : 0);
-        return x;
-	}
 }
